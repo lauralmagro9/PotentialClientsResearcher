@@ -1,0 +1,59 @@
+[google_maps]
+API_KEY = ""
+# Google Maps API key
+URL = "https://places.googleapis.com/v1/places:searchText"
+# Request URL for Google Maps
+FIELD_MASK = [
+    "places.id",
+    "places.displayName",
+    "places.formattedAddress",
+    "places.websiteUri",
+    "places.internationalPhoneNumber",
+    "places.nationalPhoneNumber",
+    "places.primaryType",
+    "places.types",
+    "places.priceLevel",
+    "places.addressComponents",
+    "nextPageToken",
+]
+# Fields to request from the Google Maps search
+COUNTRY = "España"
+# Country to search
+REGION_CODE = "ES"
+# Two letters code region
+LANGUAGE_CODE = "es"
+# Two letters code query language
+
+[export]
+HEADERS = [
+        "Nombre",
+        "Dirección",
+        "Web",
+        "Teléfono",
+        "Precio (nivel Google)",
+        "Tipo principal",
+        "Municipio (si Google lo devuelve)",
+        "Place ID",
+        "Consulta",
+    ]
+
+[gemini]
+API_KEY = ""
+MODEL = 'gemini-3.1-flash-lite'
+# Prompt sent to the model on each iteration
+PROMPT_TEMPLATE = """
+        Eres un agente comercial experto en hostelería y producto gourmet.
+        Tu objetivo es evaluar si el restaurante '{0}' (Web: {1}, clasificación según precio: {2}) es un buen cliente potencial para la venta de setas silvestres, congeladas o deshidratadas de alta calidad.
+
+        Para ello:
+        1. Utiliza la herramienta 'visitar_web_restaurante' pasándole la URL '{1}' para leer su propuesta gastronómica.
+        2. Basándote en lo que encuentres, en el nombre si la web falla o en la clasificación según el precio de google, clasifícalo estrictamente en uno de estos tres niveles:
+           - Tier 1 (Alta Cocina / Gourmet / Producto)
+           - Tier 2 (Tradicional / Bistró / Menú cuidado)
+           - Tier 3 (Bar de tapas sencillo / Raciones básicas)
+        3. Devuelve únicamente un JSON con este formato exacto:
+        {{
+            "tier": "Tier X",
+            "motivo": "Explicación breve de por qué encaja o no"
+        }}
+"""
