@@ -5,11 +5,11 @@ import time
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
-from config import settings
+from researcher.config import settings, logger
 
 
 # Initialise client
-gemini_api_key = settings["gemini"]["GEMINI_API_KEY"]
+gemini_api_key = settings["gemini"]["API_KEY"]
 client = genai.Client(api_key=gemini_api_key)
 
 # ---------------------------------------------------------
@@ -29,7 +29,7 @@ def visit_place_url(url: str) -> str:
         A string with the extracted text content, or an error/status
         message if the URL is invalid or the request fails.
     """
-    if not url or pd.isna(url) or not str(url).startswith(('http://', 'https://')):
+    if not str(url).startswith(('http://', 'https://')):
         return "No hay URL válida disponible."
     
     try:
@@ -66,7 +66,7 @@ def classification_agent(places_details: list[dict]) -> list[dict]:
         list[dict]: The same list with ``Tier`` and ``Razón agente``
         fields added to each entry.
     """
-    print("🤖 Iniciando el agente de clasificación...\n")
+    logger.info("🤖 Iniciando el agente de clasificación...\n")
     n_places = len(places_details)
 
     # Iterate row by row (row 1 is the header, so data starts at row 2)
@@ -75,45 +75,51 @@ def classification_agent(places_details: list[dict]) -> list[dict]:
         nombre = details['Nombre']
         web = details['Web']
         price_category = details['Precio (nivel Google)']
-            
-        print(f"[{i+1}/{n_places}] Analizando a fondo: {nombre} ({web})")
-        prompt_agent = settings["gemini"]["PROMPT_TEMPLATE"].format(nombre, web, price_category)
-        model=settings["gemini"]["MODEL"]
-        
-        try:
-            chat = client.chats.create(
-                model=model,
-                config=types.GenerateContentConfig(
+        tier = details.get("Tier", None)
+
+        # Process if not yet classified or failed previous classification
+        if not tier or tier=='Error':
+            logger.info(f"[{i+1}/{n_places}] Analizando a fondo: {nombre} ({web})")
+            prompt_agent = settings["gemini"]["PROMPT_TEMPLATE"].format(nombre, web, price_category)
+            model=settings["gemini"]["MODEL"]
+
+            try:
+                chat = client.chats.create(
+                    model=model,
+                    config=types.GenerateContentConfig(
                     tools=[visit_place_url],
                     temperature=0.1
                 )
-            )
+                )
             
-            response = chat.send_message(prompt_agent)
-            response_text = response.text.strip()
+                response = chat.send_message(prompt_agent)
+                response_text = response.text.strip()
             
-            # Strip markdown code-block wrappers if present
-            if response_text.startswith("```"):
-                response_text = response_text.split("```")[1]
-                if response_text.startswith("json"):
-                    response_text = response_text[4:]
-                response_text = response_text.strip()
+                # Strip markdown code-block wrappers if present
+                if response_text.startswith("```"):
+                    response_text = response_text.split("```")[1]
+                    if response_text.startswith("json"):
+                        response_text = response_text[4:]
+                    response_text = response_text.strip()
 
-            response_json = json.loads(response_text)
-            tier = response_json["tier"]
-            reason = response_json["motivo"]
+                response_json = json.loads(response_text)
+                tier = response_json["tier"]
+                reason = response_json["motivo"]
             
-            print(f"-> Clasificado: {tier}\n")
+                logger.info(f"-> Clasificado: {tier}\n")
             
-        except Exception as e:
-            print(f"Error procesando {nombre}: {e}\n")
-            tier = "Error"
-            reason = str(e)
+            except Exception as e:
+                logger.info(f"Error procesando {nombre}: {e}\n")
+                tier = "Error"
+                reason = str(e)
 
-        # Add classification data to the place details
-        details['Tier'] = tier
-        details['Motivo agente'] = reason
+            # Add classification data to the place details
+            details['Tier'] = tier
+            details['Motivo agente'] = reason
 
-        time.sleep(60)
+            time.sleep(60)
 
-        return places_details
+        else:
+            logger.info(f"[{i+1}/{n_places}] {nombre} ya está clasificado")
+            
+    return places_details

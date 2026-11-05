@@ -3,6 +3,7 @@ import sys
 import tomllib
 import logging
 from typing import Any
+from dotenv import load_dotenv
 
 # Set up logging configuration
 logging.basicConfig(
@@ -13,7 +14,7 @@ logging.basicConfig(
         logging.FileHandler('app.log', encoding='utf-8')
     ]
 )
-logger = logging.getLogger('ArticleGenerator')
+logger = logging.getLogger('PotentialClientsResearcher')
 
 SETTINGS_FILE: str = "settings.toml"
 SETTINGS_PATH: str = os.path.join(os.path.dirname(__file__), SETTINGS_FILE)
@@ -34,6 +35,9 @@ def get_config():
         ValueError: If a required environment variable is missing and no
             default value is provided.
     """
+    # Load environment variables
+    load_dotenv()
+    
     with open(SETTINGS_PATH, "rb") as fp:
         settings = tomllib.load(fp)
 

@@ -35,6 +35,8 @@ HEADERS = [
         "Municipio (si Google lo devuelve)",
         "Place ID",
         "Consulta",
+        "Tier",
+        "Motivo agente"
     ]
 
 [gemini]

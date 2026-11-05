@@ -1,4 +1,8 @@
 .env
 app.log
 poetry.lock
+config.cpython-314.pyc
 *.xlsx
+
+
+**\__pycache__
