@@ -2,7 +2,6 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.14%2B-blue.svg)](https://www.python.org/)
 [![Package Manager](https://img.shields.io/badge/poetry-package%20manager-blueviolet.svg)](https://python-poetry.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A smart B2B lead generation tool that helps you quickly identify and assess potential customers for your business in a given area. It discovers relevant establishments through Google Places, uses Google Gemini AI to analyse their websites and assess their business potential, and generates organised Excel reports with prioritised leads.
 
