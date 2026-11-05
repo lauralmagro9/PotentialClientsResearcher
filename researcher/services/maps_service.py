@@ -11,7 +11,7 @@ IMPORTANT:
 
 import time
 import requests
-from config import settings
+from researcher.config import settings, logger
 
 
 def get_component(place: dict, component_type: str) -> str:
@@ -54,6 +54,7 @@ def search_places(query: str) -> list[dict]:
         RuntimeError: If the API returns HTTP 429 (rate-limited).
         requests.HTTPError: For any other non-2xx response status.
     """
+    logger.info(f"Conectando con google maps para la búsqueda: {query}")
     rows = []
     page_token = None
     headers = {

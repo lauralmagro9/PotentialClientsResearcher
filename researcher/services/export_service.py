@@ -1,7 +1,7 @@
 import os
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-from config import settings
+from researcher.config import settings, logger
 
 def load_existing_excel(filepath:str) -> list[dict]:
     """Load an existing Excel file and return its rows as a list of dictionaries.
@@ -26,7 +26,31 @@ def load_existing_excel(filepath:str) -> list[dict]:
     return existing
 
 
-def export_excel(rows:list[dict], city:str, local_type:str, tier_classification:str, existing_file:str=None):
+def deduplicate_results(results, existing_file):
+    # If an existing Excel file is provided, load its rows first.
+    all_results = []
+    if existing_file and os.path.isfile(existing_file):
+        existing_rows = load_existing_excel(existing_file)
+        all_results.extend(existing_rows)
+        logger.info(f"Filas cargadas del Excel existente: {len(existing_rows)}")
+    all_results.extend(results)
+    
+    # De-duplicate by Place ID, keeping the first occurrence.
+    unique = {}
+    for result in all_results:
+        key = result["Place ID"] or (
+            result["Nombre"].strip().lower(),
+            result["Dirección"].strip().lower()
+        )
+        unique.setdefault(key, result)
+    logger.info(f"Lugares exportados (sin duplicados): {len(unique)}")
+    new_count = len(unique) - (len(all_results) - len(results))
+    if existing_file:
+        logger.info(f"Lugares añadidos: {max(0, new_count)}")
+    return list(unique.values())
+
+
+def export_excel(rows:list[dict], city:str, local_type:str, existing_file:str=None):
     """Export place data to a styled Excel workbook.
 
     Merges *rows* with any previously exported rows found in
@@ -38,38 +62,17 @@ def export_excel(rows:list[dict], city:str, local_type:str, tier_classification:
         rows (list[dict]): List of dictionaries containing the new place data.
         city (str): City name used to build the default output filename.
         local_type (str): Establishment type used to build the default output filename.
-        tier_classification (str): If truthy, ``Tier`` and ``Motivo`` columns
-            are appended to the header list.
         existing_file (str): Optional path to an existing Excel file whose rows
             will be merged with *rows* before writing. Default is none.
     """
     headers = settings["export"]["HEADERS"]
-    if tier_classification:
-        headers.extend(["Tier", "Motivo agente"])
-
-    # If an existing Excel file is provided, load its rows first.
-    all_rows = []
-    if existing_file and os.path.isfile(existing_file):
-        existing_rows = load_existing_excel(existing_file)
-        all_rows.extend(existing_rows)
-        print(f"Filas cargadas del Excel existente: {len(existing_rows)}")
-    all_rows.extend(rows)
-
-    # De-duplicate by Place ID, keeping the first occurrence.
-    unique = {}
-    for row in all_rows:
-        key = row.get("Place ID") or (
-            row.get("Nombre", "").strip().lower(),
-            row.get("Dirección", "").strip().lower()
-        )
-        unique.setdefault(key, row)
 
     wb = Workbook()
     ws = wb.active
     ws.title = local_type.title()
     ws.append(headers)
 
-    for row in unique.values():
+    for row in rows:
         ws.append([row.get(h, "") for h in headers])
 
     header_fill = PatternFill("solid", fgColor="1F4E78")
@@ -95,10 +98,7 @@ def export_excel(rows:list[dict], city:str, local_type:str, tier_classification:
             web_cell.hyperlink = web_cell.value
             web_cell.style = "Hyperlink"
 
-    filename = existing_file if existing_file else f"{local_type}_{city}_google_maps_search.xlsx"
+    filename = existing_file if existing_file else f"{local_type}_{city}_google_maps_search.xlsx".lower().replace(' ', '_')
     wb.save(filename)
-    print(f"Excel guardado en: {os.path.abspath(filename)}")
-    print(f"Lugares exportados (sin duplicados): {len(unique)}")
-    new_count = len(unique) - (len(all_rows) - len(rows))
-    if existing_file:
-        print(f"{local_type.title()} añadidos: {max(0, new_count)}")
+    logger.info(f"Resultados guardados en: {os.path.abspath(filename)}")
+    
