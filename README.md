@@ -1,4 +1,4 @@
-# Potential Clients Researcher (`researcher`)
+# Potential Clients Researcher
 
 [![Python Version](https://img.shields.io/badge/python-3.14%2B-blue.svg)](https://www.python.org/)
 [![Package Manager](https://img.shields.io/badge/poetry-package%20manager-blueviolet.svg)](https://python-poetry.org/)
